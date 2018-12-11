@@ -2,53 +2,47 @@
 # https://opendata.lillemetropole.fr/explore/dataset/accidents-corporels-de-la-circulation-en-france/table/?sort=grav
 
 from pyspark import *
+from itertools import islice
 
-def get_data():
-    FILE = "/home/seysn/Documents/sid/accidents-corporels-de-la-circulation-en-france.csv"
+## On pyspark interactive shell :
+# import tpspark as s
+# s.get_data(sc)
+## If modification in code
+# from importlib import reload
+# reload(s)
+
+def get_data(sc):
+    '''
+    param:
+    sc - SparkContext
+
+    return:
+    PythonRDD ready to collect()
+    '''
+
+    FILE = "accidents-corporels-de-la-circulation-en-france.csv"
     IDX_GRAVITE = 29
     IDX_LUMIERE = 1
-    data = []
-    with open(SparkFiles.get(FILE)) as f:
-        a = f.readline().split(";") # skip first line
-        # i = 0
-        # for b in a:
-        #     print(i, b)
-        #     i += 1
 
-        for line in f:
-            t = line.split(";")
-            data.append((t[IDX_LUMIERE], t[IDX_GRAVITE]))
-        #print(data)
-    return data
+    tf = sc.textFile(FILE)
 
-def to_list(a):
-    return [a]
+    # Remove first line (header)
+    res = tf.mapPartitionsWithIndex(lambda idx, it: islice(it, 1, None) if idx == 0 else it)
 
-def append(a, b):
-    a.append(b)
-    return a
+    # Modify the line so we can return a proper tuple with searched informations
+    def map_func(line):
+        line = line.split(";")
+        return (line[IDX_LUMIERE], (float(line[IDX_GRAVITE]), 1))
+    res = res.map(map_func)
 
-def extend(a, b):
-    a.extend(b)
-    return a
+    # Reduce values per key to the tuple (sum of all values, number of values)
+    def reduce_func(x, y):
+        return (x[0] + y[0], x[1] + y[1])
+    res = res.reduceByKey(reduce_func)
 
-def avg(tab):
-    res = {}
-    for t in tab:
-        average = 0
-        for i in t[1]:
-            average += float(i)
-        average /= len(t[1])
-        res[t[0]] = average
+    # Divide the sum with the number of values to get the final average
+    def avg(x):
+        return x[0] / x[1]
+    res = res.mapValues(avg)
+
     return res
-
-# import tpspark as s
-# from importlib import reload
-# reload(tpspark)
-
-# tmp = sc.parallelize(s.get_data).combineByKey(s.to_list, s.append, s.extend).collect()
-# s.avg(tmp)
-
-
-
-# sc.parallelize(s.get_data).reduceByKeyLocally()
