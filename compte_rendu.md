@@ -249,7 +249,7 @@ Première étape, mettre le fichier à traiter sur le hdfs : `hdfs dfs -put <fic
 
 Une fois que tout est installé, on peut lancer un algorithme grâce à spark soit en mode local (1 noeud, celui où on lance la commande), soit en mode cluster :
 * Pour lancer en mode local : `spark-submit --master local  tpspark.py`  
-* Pour lancer en mode cluster : `spark-submit tpspark.py` Le mode local est le mode par défaut.  
+* Pour lancer en mode cluster : `spark-submit tpspark.py` Le mode cluster est le mode par défaut.  
 
 Si on a besoin de mettre des fichiers en input sur le cluster :
 ```bash
